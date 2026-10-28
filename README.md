@@ -226,6 +226,21 @@ func testOrderStatus() throws {
 }
 ```
 
+### V4 interaction fields
+
+With `.withSpecification(.v4)` any interaction can be marked pending, given a key, and annotated with comments and references:
+
+```swift
+try builder
+  .uponReceiving("A request for a list of users")
+  .pending()
+  .key("get-users")
+  .comment("Used by the users screen")
+  .reference(group: "openapi", name: "operationId", value: "getUsers")
+  .withRequest(path: "/api/users")
+  .willRespond(with: 200)
+```
+
 Suggestions to improve this are welcome! See [contributing][contributing].
 
 References:
