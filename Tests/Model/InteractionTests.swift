@@ -53,6 +53,21 @@ final class InteractionTests: InteractionTestCase {
 		}
 	}
 
+	func testStatusCodeMatcher() async throws {
+		try builder
+			.uponReceiving("a request for a missing event")
+			.withRequest(path: "/events/missing")
+			.willRespond(with: .statusCode(.clientError, example: 404))
+
+		try await builder.verify { ctx in
+			let request = try ctx.buildURLRequest(path: "/events/missing")
+			let (_, response) = try await URLSession(configuration: .ephemeral).data(for: request)
+
+			let httpResponse = try XCTUnwrap(response as? HTTPURLResponse)
+			XCTAssertEqual(httpResponse.statusCode, 404)
+		}
+	}
+
 	func testCreateEvent() async throws {
 		try builder
 			.uponReceiving("a request to create an event with no authorization")

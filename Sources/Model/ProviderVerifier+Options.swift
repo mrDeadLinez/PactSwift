@@ -214,7 +214,9 @@ private extension Date {
 	/// Date represented as string in short ISO8601 format (eg: "2021-08-24")
 	var iso8601short: String {
 		let formatter = DateFormatter()
-		formatter.dateFormat = "YYYY-MM-dd"
+		formatter.locale = Locale(identifier: "en_US_POSIX")
+		formatter.calendar = Calendar(identifier: .gregorian)
+		formatter.dateFormat = "yyyy-MM-dd"
 		return formatter.string(from: self)
 	}
 

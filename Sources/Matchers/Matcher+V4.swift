@@ -24,27 +24,16 @@ public extension Matcher {
 
 	/// A matcher that matches the response status code.
 	///
+	/// Apply it to the response status with `Interaction.willRespond(with:builder:)` or `Interaction.Response.status(matching:)`.
+	///
 	/// - Note: Requires `Pact.Specification.v4`.
 	///
-	static func statusCode(_ statusCode: HTTPStatus) -> AnyMatcher {
-		switch statusCode {
-		case .information:
-			return GenericMatcher(type: "statusCode", value: "information").asAny()
-		case .success:
-			return GenericMatcher(type: "statusCode", value: "success").asAny()
-		case .redirect:
-			return GenericMatcher(type: "statusCode", value: "redirect").asAny()
-		case .clientError:
-			return GenericMatcher(type: "statusCode", value: "clientError").asAny()
-		case .serverError:
-			return GenericMatcher(type: "statusCode", value: "serverError").asAny()
-		case .nonError:
-			return GenericMatcher(type: "statusCode", value: "nonError").asAny()
-		case .error:
-			return GenericMatcher(type: "statusCode", value: "error").asAny()
-		case .statusCodes(let codes):
-			return GenericMatcher(type: "statusCode", value: codes).asAny()
-		}
+	/// - Parameters:
+	///   - statusCode: The status class or the list of status codes to match
+	///   - example: The status code the mock server responds with. Defaults to a code in the matched range.
+	///
+	static func statusCode(_ statusCode: HTTPStatus, example: Int? = nil) -> AnyMatcher {
+		StatusCodeMatcher(status: statusCode, value: example ?? statusCode.example).asAny()
 	}
 
 	/// A matcher that matches a value that must be present and not empty (not null or the empty string).
@@ -67,4 +56,45 @@ public extension Matcher {
 	}
 
 	// TODO: "eachKey", "eachValue"
+}
+
+private struct StatusCodeMatcher: Matcher {
+	let type = "statusCode"
+	let status: HTTPStatus
+	let value: Int
+
+	enum CodingKeys: String, CodingKey {
+		case type = "pact:matcher:type"
+		case status
+		case value
+	}
+
+	func encode(to encoder: Encoder) throws {
+		var container = encoder.container(keyedBy: CodingKeys.self)
+		try container.encode(type, forKey: .type)
+		switch status {
+		case .information: try container.encode("info", forKey: .status)
+		case .success: try container.encode("success", forKey: .status)
+		case .redirect: try container.encode("redirect", forKey: .status)
+		case .clientError: try container.encode("clientError", forKey: .status)
+		case .serverError: try container.encode("serverError", forKey: .status)
+		case .nonError: try container.encode("nonError", forKey: .status)
+		case .error: try container.encode("error", forKey: .status)
+		case .statusCodes(let codes): try container.encode(codes, forKey: .status)
+		}
+		try container.encode(value, forKey: .value)
+	}
+}
+
+private extension HTTPStatus {
+	var example: Int {
+		switch self {
+		case .information: return 100
+		case .success, .nonError: return 200
+		case .redirect: return 300
+		case .clientError, .error: return 400
+		case .serverError: return 500
+		case .statusCodes(let codes): return codes.first ?? 200
+		}
+	}
 }

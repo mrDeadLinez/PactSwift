@@ -29,7 +29,8 @@ class MatcherStatusCodeTests: MatcherTestCase {
 			#"""
 			{
 			  "pact:matcher:type" : "statusCode",
-			  "value" : "clientError"
+			  "status" : "clientError",
+			  "value" : 400
 			}
 			"""#
 		)
@@ -43,13 +44,29 @@ class MatcherStatusCodeTests: MatcherTestCase {
 			#"""
 			{
 			  "pact:matcher:type" : "statusCode",
-			  "value" : [
+			  "status" : [
 			    200,
 			    201
-			  ]
+			  ],
+			  "value" : 200
 			}
 			"""#
 		)
 	}
-	
+
+	func testMatcher_Information_SerializesAsInfo() throws {
+		let json = try jsonString(for: .statusCode(.information, example: 101))
+
+		XCTAssertEqual(
+			json,
+			#"""
+			{
+			  "pact:matcher:type" : "statusCode",
+			  "status" : "info",
+			  "value" : 101
+			}
+			"""#
+		)
+	}
+
 }

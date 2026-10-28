@@ -35,4 +35,28 @@ public extension Interaction {
 		)
 	}
 
+	/// Configures the response for the Interaction with a status matcher, eg: `.statusCode(.clientError)`.
+	/// - Throws: ``Error/canNotBeModified`` if the interaction or Pact can't be modified (i.e. the mock server for it has already started)
+	/// - Parameters:
+	///   - status: The response status matcher.
+	///   - builder: A ``ResponseBuilder`` closure.
+	@discardableResult
+	func willRespond(with status: AnyMatcher, builder: ResponseBuilder = { _ in }) throws -> Self {
+		try willRespond(with: 200) { response in
+			try response.status(matching: status)
+			try builder(response)
+		}
+	}
+
+}
+
+public extension Interaction.Response {
+
+	/// Configures the response status with a matcher, eg: `.statusCode(.clientError)`.
+	/// - Throws: ``Interaction/Error/canNotBeModified`` if the interaction or Pact can't be modified (i.e. the mock server for it has already started)
+	@discardableResult
+	func status(matching status: AnyMatcher) throws -> Self {
+		try self.status(String(data: JSONEncoder().encode(status), encoding: .utf8)!)
+	}
+
 }

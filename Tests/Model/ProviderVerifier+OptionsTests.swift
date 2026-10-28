@@ -210,13 +210,14 @@ final class ProviderVerifierOptionsTests: XCTestCase {
 	}
 
 	func testBrokerIncludeWIPPactsEnablesPendingPacts() {
-		let testDate = Date()
+		// 2024-12-30 falls in week 1 of 2025, so a week-based year would render it as 2025-12-30
+		let testDate = Date(timeIntervalSince1970: 1_735_560_000)
 		let testBroker = PactBroker(url: brokerURL, auth: .token(PactBroker.APIToken("test-token")), providerName: "API Provider Name", includeWIP: WIPPacts(since: testDate))
 
 		let testSubject = ProviderVerifier.Options(provider: .init(port: 1234), pactsSource: .broker(testBroker))
 
 		XCTAssertEqual(brokerSource(of: testSubject)?.enablePending, true)
-		XCTAssertEqual(brokerSource(of: testSubject)?.includeWIPPactsSince, isoDate(testDate))
+		XCTAssertEqual(brokerSource(of: testSubject)?.includeWIPPactsSince, "2024-12-30")
 	}
 
 }
@@ -228,12 +229,6 @@ private extension ProviderVerifierOptionsTests {
 			return nil
 		}
 		return broker
-	}
-
-	func isoDate(_ date: Date) -> String {
-		let formatter = DateFormatter()
-		formatter.dateFormat = "YYYY-MM-dd"
-		return formatter.string(from: date)
 	}
 
 }
