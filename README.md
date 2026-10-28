@@ -191,6 +191,41 @@ class PassingTestsExample: XCTestCase {
 
 The `PactBuilder` holds all the interactions between your consumer and a provider. As long as the consumer and provider names remain consistent between tests they will be accumulated into the same output pact `.json`.
 
+### Example Message Tests
+
+Message tests don't start a mock server. `verify` passes the message, with its matchers removed and its generators applied, to your handler and writes the Pact when the handler doesn't throw.
+
+```swift
+func testOrderCreatedEvent() throws {
+  let message = try builder
+    .expectsToReceive("an order created event")
+    .given("An order exists")
+    .jsonBody(.like(["id": .randomInteger(1...100), "status": .like("created")]))
+    .metadata("queue", value: "orders")
+
+  try builder.verify(message) { message in
+    let event = try JSONDecoder().decode(OrderEvent.self, from: message.contents)
+    try OrderEventHandler().handle(event)
+  }
+}
+
+// Request/response messages, eg: over a websocket. Requires `.withSpecification(.v4)`.
+func testOrderStatus() throws {
+  let message = try builder
+    .synchronousMessage("a request for the order status")
+    .withRequest { request in
+      try request.jsonBody(.like(["orderId": .integer(1)]))
+    }
+    .willRespond { response in
+      try response.jsonBody(.like(["status": .like("created")]))
+    }
+
+  try builder.verify(message) { message in
+    // message.request and message.responses
+  }
+}
+```
+
 Suggestions to improve this are welcome! See [contributing][contributing].
 
 References:

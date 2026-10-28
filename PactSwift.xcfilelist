@@ -10,6 +10,7 @@ $(SRCROOT)/Sources/Model/ProviderVerifier+Options.swift
 $(SRCROOT)/Sources/Model/BodyBuilder+Extensions.swift
 $(SRCROOT)/Sources/Model/QueryBuilder+Extensions.swift
 $(SRCROOT)/Sources/Model/PactBroker.swift
+$(SRCROOT)/Sources/Model/MetadataBuilder+Extensions.swift
 $(SRCROOT)/Sources/Model/ErrorReportable.swift
 $(SRCROOT)/Sources/Model/WIPPacts.swift
 $(SRCROOT)/Sources/Model/ErrorReporter.swift
