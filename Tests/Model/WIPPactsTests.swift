@@ -22,15 +22,9 @@ final class WIPPactsTests: XCTestCase {
 
 	func testWIPPactsInitializesWithDate() {
 		let testDate = Date()
-		let testSubject = WIPPacts(since: testDate, providerVersion: "test")
+		let testSubject = WIPPacts(since: testDate)
 
 		XCTAssertEqual(testSubject.sinceDate, testDate)
-	}
-
-	func testWIPPactsInitializesWithProviderVersion() {
-		let testSubject = WIPPacts(since: Date(), providerVersion: "test")
-
-		XCTAssertEqual(testSubject.providerVersion, "test")
 	}
 
 }

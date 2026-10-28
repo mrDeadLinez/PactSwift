@@ -39,6 +39,12 @@ public extension BodyBuilder {
 		return try body(bodyString, contentType: contentType)
 	}
 
+	/// Adds the contents of a file (for example an image or a PDF from the test bundle) as a binary body to the ``Interaction``.
+	@discardableResult
+	func body(contentsOf fileURL: URL, contentType: String) throws -> Self {
+		try body(try Data(contentsOf: fileURL), contentType: contentType)
+	}
+
 	/// Adds a HTML body to the ``Interaction``.
 	@discardableResult
 	func htmlBody(_ bodyString: String? = nil, contentType: String = "text/html") throws -> Self {
