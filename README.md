@@ -110,7 +110,7 @@ class PassingTestsExample: XCTestCase {
   func testGetUsers() {
     try builder.
       .uponReceiving("A request for a list of users")
-      .given(ProviderState(description: "users exist", params: ["first_name": "John", "last_name": "Tester"])
+      .given(try Interaction.ProviderState(description: "users exist", params: ["first_name": "John", "last_name": "Tester", "age": 42]))
       .withRequest(
         method: .GET,
         path: "/api/users",
@@ -151,7 +151,7 @@ class PassingTestsExample: XCTestCase {
   func testCreateUser() {
     try builder.
       .uponReceiving("A request to create a user")
-      .given(ProviderState(description: "user does not exist", params: ["first_name": "John", "last_name": "Appleseed"])
+      .given(try Interaction.ProviderState(description: "user does not exist", params: ["first_name": "John", "last_name": "Appleseed"]))
       .withRequest(.POST, regex: #"^/\w+/group/([a-z])+/users$"#, example:"/api/group/whoopeedeedoodah/users") { request in
         try request.jsonBody(
           .like(

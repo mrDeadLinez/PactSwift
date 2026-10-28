@@ -53,6 +53,21 @@ final class InteractionTests: InteractionTestCase {
 		}
 	}
 
+	func testProviderStateParams() async throws {
+		try builder
+			.uponReceiving("a request for a user")
+			.given(try Interaction.ProviderState(description: "A user exists", params: ["id": 1, "name": "John"]))
+			.withRequest(path: "/users/1")
+			.willRespond(with: 200)
+
+		try await builder.verify { ctx in
+			let request = try ctx.buildURLRequest(path: "/users/1")
+			let (_, response) = try await URLSession(configuration: .ephemeral).data(for: request)
+
+			XCTAssertEqual(try XCTUnwrap(response as? HTTPURLResponse).statusCode, 200)
+		}
+	}
+
 	func testStatusCodeMatcher() async throws {
 		try builder
 			.uponReceiving("a request for a missing event")
