@@ -238,6 +238,25 @@ Requests and responses can have a `multipart/form-data` body, with one call for 
 }
 ```
 
+### Plugins
+
+[Pact plugins](https://docs.pact.io/plugins) add content types, matchers and transports, eg: protobuf and gRPC. Install the plugin in `~/.pact/plugins` (with the [pact-plugin-cli](https://github.com/pact-foundation/pact-plugins/tree/main/cli)), load it on the `Pact` and pass the plugin's configuration as JSON. Plugins run as separate processes, so they don't work on iOS devices:
+
+```swift
+let pact = try Pact(consumer: "Consumer", provider: "Provider")
+  .withSpecification(.v4)
+  .usingPlugin("protobuf", version: "0.5.4")
+
+try builder
+  .expectsToReceive("a user created event")
+  .pluginContents(
+    #"{"pact:proto": "/path/to/user.proto", "pact:message-type": "User", "pact:content-type": "application/protobuf", "id": "matching(type, '1')"}"#,
+    contentType: "application/protobuf"
+  )
+```
+
+A transport provided by a plugin, eg: `grpc`, is set with `PactBuilder.Config(pactDirectory:mockServer: .init(transport: "grpc"))`.
+
 ### V4 interaction fields
 
 With `.withSpecification(.v4)` any interaction can be marked pending, given a key, and annotated with comments and references:
