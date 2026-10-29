@@ -272,6 +272,16 @@ Generated Pact contracts are written to the directory configured in the `PactBui
     builder = PactBuilder(pact: pact, config: config)
 ```
 
+The config also sets up the mock server. It can respond to CORS pre-flight requests, or use HTTPS with a certificate for `localhost` it signs itself, which the consumer has to trust (eg: in a `URLSessionDelegate`):
+
+```swift
+    let config = PactBuilder.Config(
+      pactDirectory: pactDirectory,
+      transferProtocol: .secure,
+      mockServer: .init(corsPreflight: true, keepAlive: true)
+    )
+```
+
 ## Sharing Pact contracts
 
 If your setup is correct and your tests successfully finish, you should see the generated Pact files in your nominated folder as
