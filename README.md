@@ -11,9 +11,16 @@
   <img src="Documentation/images/pact-swift.png" width="350" alt="PactSwift logo" />
 </p>
 
-This framework provides a Swift DSL for generating and verifying [Pact][pact-docs] contracts. It provides the mechanism for [Consumer-Driven Contract Testing](https://dius.com.au/2016/02/03/pact-101-getting-started-with-pact-and-consumer-driven-contract-testing/) between dependent systems where the integration is based on HTTP. `PactSwift` allows you to test the communication boundaries between your app and services it integrates with.
+This framework provides a Swift DSL for generating and verifying [Pact][pact-docs] contracts. It provides the mechanism for [Consumer-Driven Contract Testing](https://dius.com.au/2016/02/03/pact-101-getting-started-with-pact-and-consumer-driven-contract-testing/) between dependent systems where the integration is based on HTTP or messages. `PactSwift` allows you to test the communication boundaries between your app and services it integrates with.
 
-`PactSwift` implements (most of) [Pact Specification v4][pact-specification-v4] and runs the mock service "in-process". No need to set up any external mock services, stubs or extra tools 🎉. It supports contract creation along with client verification. It also supports provider verification and interaction with a Pact broker.
+`PactSwift` implements [Pact Specification][pact-docs] v1 to v4 on top of [`pact_ffi`][pact-reference-rust] and runs the mock service "in-process". No need to set up any external mock services, stubs or extra tools 🎉. It supports:
+
+- HTTP consumer tests, with matchers and generators in the path, query, headers, body and status, and binary, content type matched and multipart bodies
+- [Asynchronous and synchronous message](#example-message-tests) tests
+- V4 interaction fields (pending, key, comments and references) and provider state params
+- [Plugins](#plugins), eg: protobuf and gRPC
+- An HTTP or HTTPS mock server
+- [Provider verification](#provider-verification) from directories, files, URLs or a Pact Broker, with consumer version selectors, pending and WIP pacts and publishing of the results
 
 ## Installation
 
@@ -23,17 +30,19 @@ Note: see [Upgrading][upgrading] for notes on upgrading and breaking changes.
 
 #### Xcode
 
-1. Enter `https://github.com/surpher/PactSwift` in [Choose Package Repository](./Documentation/images/08_xcode_spm_search.png) search bar
+1. Enter `https://github.com/mrDeadLinez/PactSwift` in [Choose Package Repository](./Documentation/images/08_xcode_spm_search.png) search bar
 2. Optionally set a minimum version when [Choosing Package Options](./Documentation/images/09_xcode_spm_options.png)
 3. Add `PactSwift` to your [test](./Documentation/images/10_xcode_spm_add_package.png) target. Do not embed it in your application target.
 
 #### Package.swift
 
-```sh
+```swift
 dependencies: [
-    .package(url: "https://github.com/surpher/PactSwift.git", .upToNextMinor(from: "2.0.0"))
+    .package(url: "https://github.com/mrDeadLinez/PactSwift.git", branch: "main")
 ]
 ```
+
+`PactSwift` depends on the `main` branch of [PactSwiftMockServer](https://github.com/mrDeadLinez/PactSwiftMockServer), which ships `pact_ffi` as an XCFramework, so it has to be added with a branch requirement too.
 
 #### Linux
 
@@ -101,21 +110,18 @@ class PassingTestsExample: XCTestCase {
     let pact = try Pact(consumer: "Consumer", provider: "Provider")
       .withSpecification(.v4)
 
-    let config = PactBuilder.Config(pactDirectory: ProcessInfo.processInfo.environment["PACT_OUTPUT_DIR"])
+    let config = PactBuilder.Config(pactDirectory: ProcessInfo.processInfo.environment["PACT_OUTPUT_DIR"]!)
     builder = PactBuilder(pact: pact, config: config)
   }
 
   // MARK: - Tests
 
-  func testGetUsers() {
-    try builder.
+  func testGetUsers() async throws {
+    try builder
       .uponReceiving("A request for a list of users")
       .given(try Interaction.ProviderState(description: "users exist", params: ["first_name": "John", "last_name": "Tester", "age": 42]))
-      .withRequest(
-        method: .GET,
-        path: "/api/users",
-      )      
-      .willRespond(with: 200) { response in 
+      .withRequest(method: .GET, path: "/api/users")
+      .willRespond(with: 200) { response in
         try response.jsonBody(
           .like(
             [
@@ -123,7 +129,7 @@ class PassingTestsExample: XCTestCase {
               "per_page": .like(20),
               "total": .randomInteger(20...500),
               "total_pages": .like(3),
-              "data": .eachLike( 
+              "data": .eachLike(
                 [
                   "id": .randomUUID(like: UUID()),
                   "first_name": .like("John"),
@@ -135,24 +141,23 @@ class PassingTestsExample: XCTestCase {
           )
         )
       }
-      
-      try await builder.verify { ctx in 
-        let apiClient = RestManager(baseUrl: ctx.mockServerURL)
-        let users = try await apiClient.getUsers()
-                
-        XCTAssertEqual(users.first?.firstName, "John")
-        XCTAssertEqual(users.first?.lastName, "Tester")
-        XCTAssertEqual(users.first?.renumeration, 125_000.00)
-      }
+
+    try await builder.verify { ctx in
+      let apiClient = RestManager(baseUrl: ctx.mockServerURL)
+      let users = try await apiClient.getUsers()
+
+      XCTAssertEqual(users.first?.firstName, "John")
+      XCTAssertEqual(users.first?.lastName, "Tester")
+      XCTAssertEqual(users.first?.renumeration, 125_000.00)
     }
   }
 
   // Another Pact test example...
-  func testCreateUser() {
-    try builder.
+  func testCreateUser() async throws {
+    try builder
       .uponReceiving("A request to create a user")
       .given(try Interaction.ProviderState(description: "user does not exist", params: ["first_name": "John", "last_name": "Appleseed"]))
-      .withRequest(.POST, regex: #"^/\w+/group/([a-z])+/users$"#, example:"/api/group/whoopeedeedoodah/users") { request in
+      .withRequest(method: .POST, regex: #"^/\w+/group/([a-z])+/users$"#, example: "/api/group/whoopeedeedoodah/users") { request in
         try request.jsonBody(
           .like(
             [
@@ -164,7 +169,7 @@ class PassingTestsExample: XCTestCase {
           )
         )
       }
-      .willRespond(with: 201) { response in 
+      .willRespond(with: 201) { response in
         try response.jsonBody(
           .like(
             [
@@ -175,21 +180,27 @@ class PassingTestsExample: XCTestCase {
           )
         )
       }
-      
-      try await builder.verify { ctx in 
-        let apiClient = RestManager(baseUrl: ctx.mockServerURL)
-        let user = try await apiClient.createUser(firstName: "John", lastName: "Appleseed")
-                
-        XCTAssertEqual(user.firstName, "John")
-        XCTAssertEqual(user.lastName, "Appleseed")
-        XCTAssertFalse(user.identifier.isEmpty)
-      }
-   
+
+    try await builder.verify { ctx in
+      let apiClient = RestManager(baseUrl: ctx.mockServerURL)
+      let user = try await apiClient.createUser(firstName: "John", lastName: "Appleseed")
+
+      XCTAssertEqual(user.firstName, "John")
+      XCTAssertEqual(user.lastName, "Appleseed")
+      XCTAssertFalse(user.identifier.isEmpty)
+    }
   }
 }
 ```
 
 The `PactBuilder` holds all the interactions between your consumer and a provider. As long as the consumer and provider names remain consistent between tests they will be accumulated into the same output pact `.json`.
+
+Suggestions to improve this are welcome! See [contributing][contributing].
+
+References:
+
+- [Issue #67](https://github.com/surpher/PactSwift/issues/67)
+- [Writing Tests](https://developer.apple.com/library/archive/documentation/DeveloperTools/Conceptual/testing_with_xcode/chapters/04-writing_tests.html#//apple_ref/doc/uid/TP40014132-CH4-SW36)
 
 ### Example Message Tests
 
@@ -280,13 +291,6 @@ try builder
   .willRespond(with: 200)
 ```
 
-Suggestions to improve this are welcome! See [contributing][contributing].
-
-References:
-
-- [Issue #67](https://github.com/surpher/PactSwift/issues/67)
-- [Writing Tests](https://developer.apple.com/library/archive/documentation/DeveloperTools/Conceptual/testing_with_xcode/chapters/04-writing_tests.html#//apple_ref/doc/uid/TP40014132-CH4-SW36)
-
 ## Generated Pact contracts
 
 Generated Pact contracts are written to the directory configured in the `PactBuilder.Config`.
@@ -295,7 +299,7 @@ Generated Pact contracts are written to the directory configured in the `PactBui
     let pact = try Pact(consumer: "Consumer", provider: "Provider")
       .withSpecification(.v4)
 
-    let config = PactBuilder.Config(pactDirectory: ProcessInfo.processInfo.environment["PACT_OUTPUT_DIR"])
+    let config = PactBuilder.Config(pactDirectory: ProcessInfo.processInfo.environment["PACT_OUTPUT_DIR"]!)
     builder = PactBuilder(pact: pact, config: config)
 ```
 
@@ -335,7 +339,7 @@ let provider = ProviderVerifier.Provider(port: 8080)
 // The Pact broker configuration
 let pactBroker = PactBroker(
   url: URL(string: "https://broker.url/")!,
-  auth: auth: .token(PactBroker.APIToken("auth-token")),
+  auth: .token(PactBroker.APIToken("auth-token")),
   providerName: "Your API Service Name"
 )
 
@@ -438,7 +442,7 @@ Set the provider version, and optionally the provider branch, provider version t
 ```swift
 let pactBroker = PactBroker(
   url: URL(string: "https://broker.url/")!,
-  auth: .token("auth-token"),
+  auth: .token(PactBroker.APIToken("auth-token")),
   providerName: "Some API Service",
   providerBranch: ProcessInfo.processInfo.environment["GITHUB_REF_NAME"],
   publishResults: PactBroker.VerificationResults(
@@ -492,7 +496,7 @@ Example generators help you generate random values and define the rules around t
 
 See [Wiki page about Example Generators][example-generators] for a list of example generators `PactSwift` implements and their basic usage.
 
-Or peek into [/Sources/ExampleGenerators/][pact-swift-example-generators].
+Or peek into [/Sources/Matchers/Matcher+Generator.swift][pact-swift-example-generators].
 
 Values can also be generated from a regular expression, or from the provider state params when the provider is verified:
 
@@ -551,8 +555,8 @@ Logo and branding images provided by [@cjmlgrto](https://github.com/cjmlgrto).
 [pact-slack]: http://slack.pact.io
 [pact-specification-v3]: https://github.com/pact-foundation/pact-specification/tree/version-3
 [pact-specification-v2]: https://github.com/pact-foundation/pact-specification/tree/version-2
-[pact-swift-example-generators]: https://github.com/surpher/PactSwift/tree/main/Sources/ExampleGenerators
-[pact-swift-matchers]: https://github.com/surpher/PactSwift/tree/main/Sources/Matchers
+[pact-swift-example-generators]: ./Sources/Matchers/Matcher+Generator.swift
+[pact-swift-matchers]: ./Sources/Matchers
 [pact-twitter]: http://twitter.com/pact_up
 [releases]: https://github.com/surpher/PactSwift/releases
 [rust-lang-installation]: https://www.rust-lang.org/tools/install
