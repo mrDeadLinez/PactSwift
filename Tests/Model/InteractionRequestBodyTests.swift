@@ -691,6 +691,150 @@ final class InteractionRequestBodyTests: InteractionTestCase {
 		}
 	}
 
+	func testRequest_BodyMatchingArrayContains() async throws {
+		try buildRequest(
+			"arrayContains",
+			body: .like([
+				"roles": .arrayContains([.equals("admin"), .regex("^user-[0-9]+$", example: "user-1")])
+			])
+		)
+
+		try await verify(body: ["roles": ["guest", "user-42", "admin"]], expectedStatus: 200)
+	}
+
+	func testRequest_BodyMatchingArrayContains_Negative() async throws {
+		try buildRequest(
+			"arrayContains",
+			body: .like([
+				"roles": .arrayContains(["admin"])
+			])
+		)
+
+		try await suppressingPactFailure {
+			try await verify(body: ["roles": ["user"]], expectedStatus: 500)
+		}
+	}
+
+	func testRequest_BodyMatchingEachKey() async throws {
+		try buildRequest(
+			"eachKey",
+			body: .like([
+				"books": .eachKey(["123": "A book"], matching: .regex(#"\d+"#, example: "123"))
+			])
+		)
+
+		try await verify(body: ["books": ["1": "One", "22": "Two"]], expectedStatus: 200)
+	}
+
+	func testRequest_BodyMatchingEachKey_Negative() async throws {
+		try buildRequest(
+			"eachKey",
+			body: .like([
+				"books": .eachKey(["123": "A book"], matching: .regex(#"\d+"#, example: "123"))
+			])
+		)
+
+		try await suppressingPactFailure {
+			try await verify(body: ["books": ["one": "One"]], expectedStatus: 500)
+		}
+	}
+
+	func testRequest_BodyMatchingEachValue() async throws {
+		try buildRequest(
+			"eachValue",
+			body: .like([
+				"prices": .eachValue(["apple": 1.5], matching: .decimal(1.5))
+			])
+		)
+
+		try await verify(body: ["prices": ["pear": 2.25, "plum": 0.5]], expectedStatus: 200)
+	}
+
+	func testRequest_BodyMatchingEachValue_Negative() async throws {
+		try buildRequest(
+			"eachValue",
+			body: .like([
+				"prices": .eachValue(["apple": 1.5], matching: .decimal(1.5))
+			])
+		)
+
+		try await suppressingPactFailure {
+			try await verify(body: ["prices": ["pear": "cheap"]], expectedStatus: 500)
+		}
+	}
+
+	func testRequest_BodyMatchingValues() async throws {
+		try buildRequest(
+			"values",
+			body: .like([
+				"names": .values(["first": AnyMatcher.like("John")])
+			])
+		)
+
+		try await verify(body: ["names": ["any": "Jane", "other": "Joe"]], expectedStatus: 200)
+	}
+
+	func testRequest_BodyMatchingValues_Negative() async throws {
+		try buildRequest(
+			"values",
+			body: .like([
+				"names": .values(["first": AnyMatcher.like("John")])
+			])
+		)
+
+		try await suppressingPactFailure {
+			try await verify(body: ["names": ["any": 1]], expectedStatus: 500)
+		}
+	}
+
+	func testRequest_BodyMatchingAnd() async throws {
+		try buildRequest(
+			"and",
+			body: .like([
+				"code": .and("AB12", .notEmpty(), .regex("^[A-Z]{2}[0-9]{2}$", example: "AB12"))
+			])
+		)
+
+		try await verify(body: ["code": "XY99"], expectedStatus: 200)
+	}
+
+	func testRequest_BodyMatchingAnd_Negative() async throws {
+		try buildRequest(
+			"and",
+			body: .like([
+				"code": .and("AB12", .notEmpty(), .regex("^[A-Z]{2}[0-9]{2}$", example: "AB12"))
+			])
+		)
+
+		try await suppressingPactFailure {
+			try await verify(body: ["code": "ab12"], expectedStatus: 500)
+		}
+	}
+
+	func testRequest_BodyMatchingExpression() async throws {
+		try buildRequest(
+			"expression",
+			body: .like([
+				"count": .matching("matching(integer, 10)", example: 10)
+			])
+		)
+
+		try await verify(body: ["count": 42], expectedStatus: 200)
+	}
+
+	func testRequest_BodyMatchingExpression_Negative() async throws {
+		try buildRequest(
+			"expression",
+			body: .like([
+				"count": .matching("matching(integer, 10)", example: 10)
+			])
+		)
+
+		try await suppressingPactFailure {
+			try await verify(body: ["count": "ten"], expectedStatus: 500)
+		}
+	}
+
 	// MARK: - Helpers
 
 	func buildRequest(_ matcher: String, body: AnyMatcher) throws {

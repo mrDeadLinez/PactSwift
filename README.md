@@ -375,6 +375,27 @@ See [Wiki page about Matchers][matchers] for a list of matchers `PactSwift` impl
 
 Or peek into [/Sources/Matchers/][pact-swift-matchers].
 
+Collections and combinations of matchers:
+
+```swift
+try response.jsonBody(
+  .like([
+    "roles": .arrayContains([.equals("admin"), .regex("^user-[0-9]+$", example: "user-1")]),
+    "books": .eachKey(["123": "A book"], matching: .regex(#"\d+"#, example: "123")),
+    "prices": .eachValue(["apple": 1.5], matching: .decimal(1.5)),
+    "names": .values(["first": AnyMatcher.like("John")]),
+    "code": .and("AB12", .notEmpty(), .regex("^[A-Z]{2}[0-9]{2}$", example: "AB12")),
+    "count": .matching("matching(integer, 10)", example: 10)
+  ])
+)
+```
+
+Binary bodies can be matched on their content type, detected from their bytes, instead of byte for byte:
+
+```swift
+try request.body(photoData, matchingContentType: "image/png")
+```
+
 ## Example Generators
 
 In addition to matching, you can use a set of example generators that generate random values each time you run your tests.

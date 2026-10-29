@@ -34,4 +34,20 @@ class MatcherNotEmptyTests: MatcherTestCase {
 			"""#
 		)
 	}
+
+	func testMatcher_MatchNotEmptyWithValue() throws {
+		let json = try jsonString(for: .notEmpty(["a"]))
+
+		XCTAssertEqual(
+			json,
+			#"""
+			{
+			  "pact:matcher:type" : "notEmpty",
+			  "value" : [
+			    "a"
+			  ]
+			}
+			"""#
+		)
+	}
 }

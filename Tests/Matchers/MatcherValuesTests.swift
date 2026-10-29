@@ -21,7 +21,6 @@ import XCTest
 
 class MatcherValuesTests: MatcherTestCase {
 
-	/* TODO: Disabled for the moment. Until I understand its use case.
 	func testMatcher_Values_SerializesToJSON() throws {
 		let json = try jsonString(for: .values(["a": "b", "c": "d"]))
 		
@@ -38,5 +37,4 @@ class MatcherValuesTests: MatcherTestCase {
 			"""#
 		)
 	}
-	*/
 }

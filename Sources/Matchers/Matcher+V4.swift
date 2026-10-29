@@ -20,7 +20,27 @@ import Foundation
 // MARK: - Pact Specification v4 matchers
 
 public extension Matcher {
-	// TODO: "arrayContains"
+	/// A matcher that checks that an array contains at least one item matching each of the `variants`, in any order.
+	///
+	/// - Note: Requires `Pact.Specification.v4`.
+	///
+	/// - Parameters:
+	///   - variants: The items the array has to contain. They can contain matchers.
+	///
+	static func arrayContains<T: Encodable>(_ variants: [T]) -> AnyMatcher {
+		ArrayContainsMatcher(variants: variants).asAny()
+	}
+
+	/// A matcher that checks that an array contains at least one item matching each of the `variants`, in any order.
+	///
+	/// - Note: Requires `Pact.Specification.v4`.
+	///
+	/// - Parameters:
+	///   - variants: The matchers of the items the array has to contain.
+	///
+	static func arrayContains(_ variants: [AnyMatcher]) -> AnyMatcher {
+		ArrayContainsMatcher(variants: variants).asAny()
+	}
 
 	/// A matcher that matches the response status code.
 	///
@@ -41,7 +61,18 @@ public extension Matcher {
 	/// - Note: Requires `Pact.Specification.v4`.
 	///
 	static func notEmpty() -> AnyMatcher {
-		GenericMatcher(type: "notEmpty", value: "non-empty").asAny()
+		notEmpty("non-empty")
+	}
+
+	/// A matcher that matches a value that must be present and not empty (not null, the empty string, an empty array or an empty object).
+	///
+	/// - Note: Requires `Pact.Specification.v4`.
+	///
+	/// - Parameters:
+	///   - value: An example value.
+	///
+	static func notEmpty<T: Encodable>(_ value: T) -> AnyMatcher {
+		GenericMatcher(type: "notEmpty", value: value).asAny()
 	}
 
 	/// A matcher that matches a value that must be valid based on the `semver` specification.
@@ -55,7 +86,71 @@ public extension Matcher {
 		GenericMatcher(type: "semver", value: value).asAny()
 	}
 
-	// TODO: "eachKey", "eachValue"
+	/// A matcher that matches every key of a map/dictionary against the `rules`.
+	///
+	/// Eg: `.eachKey(["123": "A book"], matching: .regex(#"\d+"#, example: "123"))`.
+	///
+	/// - Note: Requires `Pact.Specification.v4`.
+	///
+	/// - Parameters:
+	///   - value: An example dictionary.
+	///   - rules: The matchers every key must satisfy.
+	///
+	static func eachKey<T: Encodable>(_ value: [String: T], matching rules: AnyMatcher...) -> AnyMatcher {
+		precondition(rules.isEmpty == false, "At least one matcher is required")
+		return EachMatcher(type: "eachKey", value: value, rules: rules).asAny()
+	}
+
+	/// A matcher that matches every value of a map/dictionary against the `rules`.
+	///
+	/// Eg: `.eachValue(["price": 1.23], matching: .decimal(1.23))`.
+	///
+	/// - Note: Requires `Pact.Specification.v4`.
+	///
+	/// - Parameters:
+	///   - value: An example dictionary.
+	///   - rules: The matchers every value must satisfy.
+	///
+	static func eachValue<T: Encodable>(_ value: [String: T], matching rules: AnyMatcher...) -> AnyMatcher {
+		precondition(rules.isEmpty == false, "At least one matcher is required")
+		return EachMatcher(type: "eachValue", value: value, rules: rules).asAny()
+	}
+
+	/// A matcher defined by a matching rule expression, eg: `.matching("matching(type, 'Name')", example: "Name")`.
+	///
+	/// See [Matching Rule definition expressions](https://docs.rs/pact_models/latest/pact_models/matchingrules/expressions/index.html).
+	///
+	/// - Note: Requires `Pact.Specification.v4`.
+	///
+	/// - Parameters:
+	///   - expression: The matching rule expression.
+	///   - example: The example value. It has to be the value the expression defines.
+	///
+	static func matching<T: Encodable>(_ expression: String, example: T) -> AnyMatcher {
+		GenericMatcher(type: expression, value: example).asAny()
+	}
+}
+
+private struct ArrayContainsMatcher<VariantType: Encodable>: Matcher {
+	let type = "arrayContains"
+	let variants: [VariantType]
+
+	enum CodingKeys: String, CodingKey {
+		case type = "pact:matcher:type"
+		case variants
+	}
+}
+
+private struct EachMatcher<ValueType: Encodable>: Matcher {
+	let type: String
+	let value: [String: ValueType]
+	let rules: [AnyMatcher]
+
+	enum CodingKeys: String, CodingKey {
+		case type = "pact:matcher:type"
+		case value
+		case rules
+	}
 }
 
 private struct StatusCodeMatcher: Matcher {

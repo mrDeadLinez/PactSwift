@@ -102,28 +102,39 @@ public extension Matcher {
 		GenericMatcher(type: "boolean", value: value).asAny()
 	}
 
-	/* TODO: Disabled some matchers that I'm unsure how to use at the moment. 🤔
-
-	/// A matcher that matches binary data by its content type (magic file check).
+	/// A matcher that matches the values in a map/dictionary, ignoring the keys.
 	///
 	/// - Note: Requires `Pact.Specification.v3`.
 	///
 	/// - Parameters:
-	///   - value: The MIME content type to match against eg (`"image/jpeg"`).
-	///
-	static func contentType(_ value: String) -> AnyMatcher {
-		GenericMatcher(type: "contentType", value: value).asAny()
-	}
-
-	/// A matcher that matches the values in a map/dictionary, ignoring the keys
-	///
-	/// - Note: Requires `Pact.Specification.v3`.
-	///
-	/// - Parameters:
-	///   - values: A dictionary to match against. The keys don't matter.
+	///   - value: An example dictionary. Values are compared for equality unless they are matchers, eg: `.values(["id": AnyMatcher.integer(1)])`.
 	///
 	static func values<T: Encodable>(_ value: [String: T]) -> AnyMatcher {
 		GenericMatcher(type: "values", value: value).asAny()
 	}
-	*/
+
+	/// A matcher that applies all the `matchers` to the same value.
+	///
+	/// Eg: `.and("2024-01-01", .notEmpty(), .date("2024-01-01", format: "yyyy-MM-dd"))`.
+	///
+	/// - Note: Requires `Pact.Specification.v3`. Generators of the combined `matchers` are ignored.
+	///
+	/// - Parameters:
+	///   - value: The example value.
+	///   - matchers: The matchers the value must satisfy.
+	///
+	static func and<T: Encodable>(_ value: T, _ matchers: AnyMatcher...) -> AnyMatcher {
+		precondition(matchers.isEmpty == false, "At least one matcher is required")
+		return CombinedMatcher(matchers: matchers, value: value).asAny()
+	}
+}
+
+private struct CombinedMatcher<ValueType: Encodable>: Matcher {
+	let matchers: [AnyMatcher]
+	let value: ValueType
+
+	enum CodingKeys: String, CodingKey {
+		case matchers = "pact:matcher:type"
+		case value
+	}
 }
