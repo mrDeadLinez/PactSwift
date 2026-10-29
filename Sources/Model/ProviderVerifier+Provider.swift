@@ -16,6 +16,7 @@
 //
 
 import Foundation
+import PactSwiftMockServer
 
 public extension ProviderVerifier {
 
@@ -28,10 +29,14 @@ public extension ProviderVerifier {
 		/// URL of the provider being verified
 		let url: URL?
 
+		/// Additional transports of the provider, eg: `message` for message pacts
+		let transports: [ProviderVerificationOptions.Transport]
+
 		/// The provider being verified
-		public init(url: URL? = nil, port: Int) {
+		public init(url: URL? = nil, port: Int, transports: [ProviderVerificationOptions.Transport] = []) {
 			self.url = url
 			self.port = port
+			self.transports = transports
 		}
 	}
 

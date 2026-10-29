@@ -192,6 +192,61 @@ final class ProviderVerifierOptionsTests: XCTestCase {
 		XCTAssertEqual(decoded, selectors)
 	}
 
+	func testPublishingVerificationWithBranchAndBuildURL() {
+		let testBroker = PactBroker(
+			url: brokerURL,
+			auth: .token(PactBroker.APIToken("test-token")),
+			providerName: "API Provider Name",
+			providerBranch: "main",
+			consumerTags: [.matchingBranch()],
+			publishResults: .init(providerVersion: "1.0.0", buildURL: URL(string: "https://ci.url/builds/1")!)
+		)
+
+		let testSubject = ProviderVerifier.Options(provider: .init(port: 1234), pactsSource: .broker(testBroker))
+
+		XCTAssertEqual(
+			testSubject.verificationOptions.publish,
+			.init(providerVersion: "1.0.0", providerBranch: "main", buildURL: URL(string: "https://ci.url/builds/1")!)
+		)
+		XCTAssertEqual(brokerSource(of: testSubject)?.providerBranch, "main")
+	}
+
+	func testRequestOptions() {
+		let testSubject = ProviderVerifier.Options(
+			provider: .init(port: 1234, transports: [.init(protocol: "message", port: 1234, path: "/messages")]),
+			pactsSource: .directories(["/tmp/pacts"]),
+			stateChangeURL: URL(string: "https://provider.url/states")!,
+			requestOptions: .init(
+				customHeaders: ["Authorization": "Bearer token"],
+				disableSSLVerification: true,
+				timeout: 10_000,
+				followRedirects: false,
+				stateChangeTeardown: true,
+				stateChangeAsQuery: true
+			)
+		)
+
+		let options = testSubject.verificationOptions
+		XCTAssertEqual(options.provider.transports, [.init(protocol: "message", port: 1234, path: "/messages")])
+		XCTAssertEqual(options.customHeaders, ["Authorization": "Bearer token"])
+		XCTAssertTrue(options.disableSSLVerification)
+		XCTAssertEqual(options.requestTimeout, 10_000)
+		XCTAssertEqual(options.followRedirects, false)
+		XCTAssertTrue(options.stateChangeTeardown)
+		XCTAssertTrue(options.stateChangeAsQuery)
+	}
+
+	func testDefaultRequestOptions() {
+		let options = ProviderVerifier.Options(provider: .init(port: 1234), pactsSource: .directories(["/tmp/pacts"])).verificationOptions
+
+		XCTAssertEqual(options.customHeaders, [:])
+		XCTAssertFalse(options.disableSSLVerification)
+		XCTAssertNil(options.requestTimeout)
+		XCTAssertNil(options.followRedirects)
+		XCTAssertFalse(options.stateChangeTeardown)
+		XCTAssertFalse(options.stateChangeAsQuery)
+	}
+
 	func testBrokerWithPendingPacts() {
 		let testBroker = PactBroker(url: brokerURL, auth: .token(PactBroker.APIToken("test-token")), providerName: "API Provider Name", includePending: true)
 

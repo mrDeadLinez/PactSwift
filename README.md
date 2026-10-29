@@ -324,6 +324,37 @@ ProviderVerifier().verify(options: options) {
 }
 ```
 
+Select the consumer versions to verify with [consumer version selectors](https://docs.pact.io/pact_broker/advanced_topics/consumer_version_selectors), and set the provider branch so the broker can work out pending and WIP pacts:
+
+```swift
+let pactBroker = PactBroker(
+  url: URL(string: "https://broker.url/")!,
+  auth: .token(PactBroker.APIToken("auth-token")),
+  providerName: "Your API Service Name",
+  providerBranch: "main",
+  consumerTags: [.mainBranch(), .matchingBranch(), .deployedOrReleased()],
+  includePending: true
+)
+```
+
+The requests to the provider and to the state change URL can be configured, and message pacts are verified through a `message` transport:
+
+```swift
+let options = ProviderVerifier.Options(
+  provider: ProviderVerifier.Provider(port: 8080, transports: [.init(protocol: "message", port: 8080, path: "/messages")]),
+  pactsSource: .broker(pactBroker),
+  stateChangeURL: URL(string: "http://localhost:8080/provider-states"),
+  requestOptions: .init(
+    customHeaders: ["Authorization": "Bearer token"],
+    disableSSLVerification: true,
+    timeout: 10_000,
+    followRedirects: false,
+    stateChangeTeardown: true,
+    stateChangeAsQuery: false
+  )
+)
+```
+
 To validate Pacts from local folders or specific Pact files use the desired case.
 
 <details><summary>Examples</summary>
@@ -359,16 +390,18 @@ To submit the verification results, provide `PactBroker.VerificationResults` obj
 
 <details><summary>Example</summary>
 
-Set the provider version and optional provider version tags. See [version numbers](https://docs.pact.io/pact_broker/pacticipant_version_numbers) for best practices on Pact versioning.
+Set the provider version, and optionally the provider branch, provider version tags and the URL of the build. See [version numbers](https://docs.pact.io/pact_broker/pacticipant_version_numbers) for best practices on Pact versioning.
 
 ```swift
 let pactBroker = PactBroker(
   url: URL(string: "https://broker.url/")!,
   auth: .token("auth-token"),
   providerName: "Some API Service",
+  providerBranch: ProcessInfo.processInfo.environment["GITHUB_REF_NAME"],
   publishResults: PactBroker.VerificationResults(
     providerVersion: "v1.0.0+\(ProcessInfo.processInfo.environment["GITHUB_SHA"])",
-    providerTags: ["\(ProcessInfo.processInfo.environment["GITHUB_REF"])"]
+    providerTags: ["\(ProcessInfo.processInfo.environment["GITHUB_REF"])"],
+    buildURL: URL(string: "https://github.com/org/repo/actions/runs/1")
   )
 )
 ```

@@ -26,7 +26,7 @@ final class VersionSelectorTests: XCTestCase {
 
 		XCTAssertEqual(testSubject.tag, "test-tag")
 		XCTAssertNil(testSubject.fallbackTag)
-		XCTAssertTrue(testSubject.latest)
+		XCTAssertEqual(testSubject.latest, true)
 		XCTAssertNil(testSubject.consumer)
 	}
 
@@ -40,7 +40,7 @@ final class VersionSelectorTests: XCTestCase {
 	func testVersionSelectorSetsLatest() {
 		let testSubject = VersionSelector(tag: "test-tag", latest: false)
 
-		XCTAssertFalse(testSubject.latest)
+		XCTAssertEqual(testSubject.latest, false)
 	}
 
 	func testVersionSelectorSetsConsumer() {
@@ -56,6 +56,25 @@ final class VersionSelectorTests: XCTestCase {
 		XCTAssertTrue(testSubject.contains("\"fallbackTag\":\"main\""))
 		XCTAssertTrue(testSubject.contains("\"latest\":true"))
 		XCTAssertTrue(testSubject.contains("\"consumer\":\"api-consumer\""))
+	}
+
+	func testBranchSelectorsJSON() throws {
+		XCTAssertEqual(try json(.mainBranch()), #"{"mainBranch":true}"#)
+		XCTAssertEqual(try json(.branch("feat/x", fallbackBranch: "main", consumer: "app")), #"{"branch":"feat\/x","consumer":"app","fallbackBranch":"main"}"#)
+		XCTAssertEqual(try json(.matchingBranch()), #"{"matchingBranch":true}"#)
+	}
+
+	func testEnvironmentSelectorsJSON() throws {
+		XCTAssertEqual(try json(.deployedOrReleased()), #"{"deployedOrReleased":true}"#)
+		XCTAssertEqual(try json(.deployed(to: "production")), #"{"deployed":true,"environment":"production"}"#)
+		XCTAssertEqual(try json(.released()), #"{"released":true}"#)
+		XCTAssertEqual(try json(.environment("test", consumer: "app")), #"{"consumer":"app","environment":"test"}"#)
+	}
+
+	private func json(_ selector: VersionSelector) throws -> String {
+		let encoder = JSONEncoder()
+		encoder.outputFormatting = .sortedKeys
+		return String(data: try encoder.encode(selector), encoding: .utf8)!
 	}
 
 }

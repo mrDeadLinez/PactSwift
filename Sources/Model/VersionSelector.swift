@@ -23,10 +23,10 @@ public struct VersionSelector: Codable, Equatable {
 	// MARK: - Properties
 
 	/// The name of the tag which applies to the pacticipant versions of the pacts to verify
-	let tag: String
+	let tag: String?
 
 	/// Whether or not to verify only the pact that belongs to the latest application version
-	let latest: Bool
+	let latest: Bool?
 
 	/// A fallback tag if a pact for the specified `tag` does not exist
 	let fallbackTag: String?
@@ -35,6 +35,30 @@ public struct VersionSelector: Codable, Equatable {
 	///
 	/// When omitted, all consumers are included.
 	let consumer: String?
+
+	/// The latest version of each consumer's main branch
+	let mainBranch: Bool?
+
+	/// The latest version of each consumer on the branch
+	let branch: String?
+
+	/// A fallback branch if a pact for the specified `branch` does not exist
+	let fallbackBranch: String?
+
+	/// The latest version of each consumer on the branch with the same name as the provider branch
+	let matchingBranch: Bool?
+
+	/// The versions of each consumer currently deployed or released to any environment
+	let deployedOrReleased: Bool?
+
+	/// The versions of each consumer currently deployed
+	let deployed: Bool?
+
+	/// The versions of each consumer currently released
+	let released: Bool?
+
+	/// The environment the consumer versions are deployed or released to
+	let environment: String?
 
 	// MARK: - Initialization
 
@@ -49,10 +73,70 @@ public struct VersionSelector: Codable, Equatable {
 	/// See [https://docs.pact.io/selectors](https://docs.pact.io/selectors) for more context.
 	///
 	public init(tag: String, fallbackTag: String? = nil, latest: Bool = true, consumer: String? = nil) {
+		self.init(tag: tag, latest: latest, fallbackTag: fallbackTag, consumer: consumer)
+	}
+
+	private init(
+		tag: String? = nil,
+		latest: Bool? = nil,
+		fallbackTag: String? = nil,
+		consumer: String? = nil,
+		mainBranch: Bool? = nil,
+		branch: String? = nil,
+		fallbackBranch: String? = nil,
+		matchingBranch: Bool? = nil,
+		deployedOrReleased: Bool? = nil,
+		deployed: Bool? = nil,
+		released: Bool? = nil,
+		environment: String? = nil
+	) {
 		self.tag = tag
-		self.fallbackTag = fallbackTag
 		self.latest = latest
+		self.fallbackTag = fallbackTag
 		self.consumer = consumer
+		self.mainBranch = mainBranch
+		self.branch = branch
+		self.fallbackBranch = fallbackBranch
+		self.matchingBranch = matchingBranch
+		self.deployedOrReleased = deployedOrReleased
+		self.deployed = deployed
+		self.released = released
+		self.environment = environment
+	}
+
+	/// The latest version of each consumer's main branch
+	public static func mainBranch(consumer: String? = nil) -> VersionSelector {
+		VersionSelector(consumer: consumer, mainBranch: true)
+	}
+
+	/// The latest version of each consumer on the `branch`, or on the `fallbackBranch` when there is none
+	public static func branch(_ branch: String, fallbackBranch: String? = nil, consumer: String? = nil) -> VersionSelector {
+		VersionSelector(consumer: consumer, branch: branch, fallbackBranch: fallbackBranch)
+	}
+
+	/// The latest version of each consumer on the branch with the same name as the provider branch set in `PactBroker`
+	public static func matchingBranch(consumer: String? = nil) -> VersionSelector {
+		VersionSelector(consumer: consumer, matchingBranch: true)
+	}
+
+	/// The versions of each consumer currently deployed or released to any environment
+	public static func deployedOrReleased(consumer: String? = nil) -> VersionSelector {
+		VersionSelector(consumer: consumer, deployedOrReleased: true)
+	}
+
+	/// The versions of each consumer currently deployed to the `environment`, or to any environment when `nil`
+	public static func deployed(to environment: String? = nil, consumer: String? = nil) -> VersionSelector {
+		VersionSelector(consumer: consumer, deployed: true, environment: environment)
+	}
+
+	/// The versions of each consumer currently released to the `environment`, or to any environment when `nil`
+	public static func released(to environment: String? = nil, consumer: String? = nil) -> VersionSelector {
+		VersionSelector(consumer: consumer, released: true, environment: environment)
+	}
+
+	/// The versions of each consumer currently deployed or released to the `environment`
+	public static func environment(_ environment: String, consumer: String? = nil) -> VersionSelector {
+		VersionSelector(consumer: consumer, environment: environment)
 	}
 
 }

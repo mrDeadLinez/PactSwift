@@ -61,16 +61,19 @@ public struct PactBroker {
 		let publishResults = true
 		let providerVersion: String
 		let providerTags: [String]?
+		let buildURL: URL?
 
 		/// Initializes the VerificationResults object
 		///
 		/// - Parameters:
 		///   - providerVersion: The semantical version of the Provider API
 		///   - providerTags: Provider tags to use when publishing results
+		///   - buildURL: URL of the build that ran the verification
 		///
-		public init(providerVersion version: String, providerTags tags: [String]? = nil) {
+		public init(providerVersion version: String, providerTags tags: [String]? = nil, buildURL: URL? = nil) {
 			self.providerVersion = version
 			self.providerTags = tags
+			self.buildURL = buildURL
 		}
 	}
 
@@ -99,6 +102,12 @@ public struct PactBroker {
 	/// Provider tags to use when publishing results
 	let providerTags: [String]?
 
+	/// Branch of the provider being verified
+	let providerBranch: String?
+
+	/// URL of the build that ran the verification
+	let buildURL: URL?
+
 	/// Includes pending pacts in verification
 	let includePending: Bool?
 
@@ -113,6 +122,7 @@ public struct PactBroker {
 	///   - url: The URL of Pact Broker
 	///   - auth: The authentication option
 	///   - providerName: The name of provider being verified
+	///   - providerBranch: The branch of provider being verified. The broker uses it for pending and WIP pacts and `VersionSelector.matchingBranch`, and it is published with the results.
 	///   - consumerTags: List of consumer pacts to verify
 	///   - includePending: Include pending pacts in verification
 	///   - includeWIP: Allow pacts that don't match given consumer selectors (or tags) to be verified, without causing the overall task to fail
@@ -125,10 +135,11 @@ public struct PactBroker {
 	///
 	/// - Warning: When including WIP pacts, `includePending` will be set to `true`.
 	///
-	public init(url: URL, auth: Either<SimpleAuth, APIToken>, providerName: String, consumerTags: [VersionSelector]? = nil, includePending: Bool? = nil, includeWIP: WIPPacts? = nil, publishResults verificationResults: VerificationResults? = nil) {
+	public init(url: URL, auth: Either<SimpleAuth, APIToken>, providerName: String, providerBranch: String? = nil, consumerTags: [VersionSelector]? = nil, includePending: Bool? = nil, includeWIP: WIPPacts? = nil, publishResults verificationResults: VerificationResults? = nil) {
 		self.url = url.absoluteString
 		self.authentication = auth
 		self.providerName = providerName
+		self.providerBranch = providerBranch
 
 		self.consumerTags = consumerTags
 		self.includePending = includePending
@@ -138,6 +149,7 @@ public struct PactBroker {
 		// Provider version is only required when publishing verification results
 		self.providerVersion = verificationResults?.providerVersion
 		self.providerTags = verificationResults?.providerTags
+		self.buildURL = verificationResults?.buildURL
 	}
 
 }

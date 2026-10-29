@@ -67,6 +67,43 @@ public extension ProviderVerifier {
 			case consumers([String])
 		}
 
+		/// Options of the requests to the provider and the state change URL
+		public struct RequestOptions {
+			/// Headers added to every request to the provider, eg: an `Authorization` header
+			public var customHeaders: [String: String]
+
+			/// Accepts invalid TLS certificates of the provider
+			public var disableSSLVerification: Bool
+
+			/// Timeout of the requests to the provider, in milliseconds. Defaults to 5000.
+			public var timeout: Int?
+
+			/// Whether redirects of the provider are followed. They are followed by default.
+			public var followRedirects: Bool?
+
+			/// Also calls the state change URL to tear down the provider states after each interaction
+			public var stateChangeTeardown: Bool
+
+			/// Sends the provider state to the state change URL as query parameters instead of in the request body
+			public var stateChangeAsQuery: Bool
+
+			public init(
+				customHeaders: [String: String] = [:],
+				disableSSLVerification: Bool = false,
+				timeout: Int? = nil,
+				followRedirects: Bool? = nil,
+				stateChangeTeardown: Bool = false,
+				stateChangeAsQuery: Bool = false
+			) {
+				self.customHeaders = customHeaders
+				self.disableSSLVerification = disableSSLVerification
+				self.timeout = timeout
+				self.followRedirects = followRedirects
+				self.stateChangeTeardown = stateChangeTeardown
+				self.stateChangeAsQuery = stateChangeAsQuery
+			}
+		}
+
 		// MARK: - Properties
 
 		/// The port of provider being verified
@@ -74,6 +111,9 @@ public extension ProviderVerifier {
 
 		/// URL of the provider being verified
 		let providerURL: URL?
+
+		/// Additional transports of the provider
+		let transports: [ProviderVerificationOptions.Transport]
 
 		/// Only validated interactions that match this filter
 		let filterPacts: FilterPacts?
@@ -84,6 +124,9 @@ public extension ProviderVerifier {
 		/// URL to post state change requests to
 		let stateChangeURL: URL?
 
+		/// Options of the requests to the provider and the state change URL
+		let requestOptions: RequestOptions
+
 		// MARK: - Initialization
 
 		/// Defines the options to use when verifying a provider
@@ -93,6 +136,7 @@ public extension ProviderVerifier {
 		///   - pactsSource: The locations of pacts
 		///   - filter: Only validates the interactions that match the filter
 		///   - stateChangeURL: URL to post state change requests to
+		///   - requestOptions: Options of the requests to the provider and the state change URL
 		///
 		/// The verification logs are written to the sinks configured with `Logging.initialize(_:)` from PactSwiftMockServer.
 		///
@@ -100,13 +144,16 @@ public extension ProviderVerifier {
 			provider: Provider,
 			pactsSource: PactsSource,
 			filter: FilterPacts? = nil,
-			stateChangeURL: URL? = nil
+			stateChangeURL: URL? = nil,
+			requestOptions: RequestOptions = RequestOptions()
 		) {
 			self.providerURL = provider.url
 			self.port = provider.port
+			self.transports = provider.transports
 			self.pactsSource = pactsSource
 			self.filterPacts = filter
 			self.stateChangeURL = stateChangeURL
+			self.requestOptions = requestOptions
 		}
 
 		@available(*, deprecated, message: "`logLevel` is ignored. Configure Pact logging with `Logging.initialize(_:)` from PactSwiftMockServer")
@@ -127,7 +174,16 @@ extension ProviderVerifier.Options {
 
 	/// The options passed to the PactSwiftMockServer `Verifier`
 	var verificationOptions: ProviderVerificationOptions {
-		var options = ProviderVerificationOptions(provider: .init(url: providerURL, port: port), sources: [])
+		var options = ProviderVerificationOptions(
+			provider: .init(url: providerURL, port: port, transports: transports),
+			sources: [],
+			stateChangeTeardown: requestOptions.stateChangeTeardown,
+			stateChangeAsQuery: requestOptions.stateChangeAsQuery,
+			customHeaders: requestOptions.customHeaders,
+			disableSSLVerification: requestOptions.disableSSLVerification,
+			requestTimeout: requestOptions.timeout,
+			followRedirects: requestOptions.followRedirects
+		)
 
 		switch pactsSource {
 		case .broker(let broker):
@@ -136,7 +192,12 @@ extension ProviderVerifier.Options {
 
 			// Publishing verification results back to Broker
 			if broker.publishVerificationResult, let providerVersion = broker.providerVersion, providerVersion.isEmpty == false {
-				options.publish = .init(providerVersion: providerVersion, providerTags: broker.providerTags ?? [])
+				options.publish = .init(
+					providerVersion: providerVersion,
+					providerTags: broker.providerTags ?? [],
+					providerBranch: broker.providerBranch,
+					buildURL: broker.buildURL
+				)
 			}
 
 		case .directories(let pactDirs):
@@ -198,6 +259,7 @@ private extension PactBroker {
 			enablePending: includePending == true || includeWIP != nil,
 			includeWIPPactsSince: includeWIP?.sinceDate.iso8601short,
 			providerTags: providerTags ?? [],
+			providerBranch: providerBranch,
 			consumerVersionSelectors: consumerVersionSelectors
 		)
 	}
