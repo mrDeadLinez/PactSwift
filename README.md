@@ -226,6 +226,14 @@ func testOrderStatus() throws {
 }
 ```
 
+When your code produces the response, `verify(_:respondingWith:)` passes it the request and matches the response it returns against the first expected response, applying its matchers. Contents have to be UTF-8 text:
+
+```swift
+try builder.verify(message, respondingWith: { request in
+  MessageContents(contents: try OrderStatusHandler().respond(to: request.contents), contentType: "application/json", metadata: [:])
+})
+```
+
 ### Multipart bodies
 
 Requests and responses can have a `multipart/form-data` body, with one call for every part. A part matches on its content type, which is detected from its bytes, so `application/json` parts are detected as `text/plain` and don't match:
