@@ -226,6 +226,18 @@ func testOrderStatus() throws {
 }
 ```
 
+### Multipart bodies
+
+Requests and responses can have a `multipart/form-data` body, with one call for every part. A part matches on its content type, which is detected from its bytes, so `application/json` parts are detected as `text/plain` and don't match:
+
+```swift
+.withRequest(method: .POST, path: "/api/photos") { request in
+  try request
+    .multipartBody(contentsOf: photoURL, contentType: "image/png", partName: "photo")
+    .multipartBody(contentsOf: captionURL, contentType: "text/plain", partName: "caption")
+}
+```
+
 ### V4 interaction fields
 
 With `.withSpecification(.v4)` any interaction can be marked pending, given a key, and annotated with comments and references:
