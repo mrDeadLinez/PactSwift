@@ -409,6 +409,22 @@ pactsSource: .files(["/absolute/path/to/file/consumerName-providerName.json"])
 pactsSource: .urls([URL(string: "https://some.base.url/location/of/pact/consumerName-providerName.json")])
 ```
 
+```swift
+// Pact files at URLs that require authentication
+pactsSource: .urls([pactURL], authentication: .token(PactBroker.APIToken("auth-token")))
+```
+
+```swift
+// Write the result of every interaction as JSON, and don't fail when the broker has no pacts for the provider
+ProviderVerifier.Options(
+  provider: provider,
+  pactsSource: .broker(pactBroker),
+  noPactsIsError: false,
+  colouredOutput: false,
+  jsonReportURL: URL(fileURLWithPath: "/tmp/verification.json")
+)
+```
+
 </details>
 
 ### Submitting verification results

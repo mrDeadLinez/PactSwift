@@ -47,8 +47,8 @@ public extension ProviderVerifier {
 			/// Verify specific pact files
 			case files([String])
 
-			/// Verify specific pacts at URLs
-			case urls([URL])
+			/// Verify specific pacts at URLs, fetched with the `authentication` when set
+			case urls([URL], authentication: PactBroker.Either<PactBroker.SimpleAuth, PactBroker.APIToken>? = nil)
 		}
 
 		/// Filter pacts
@@ -127,6 +127,15 @@ public extension ProviderVerifier {
 		/// Options of the requests to the provider and the state change URL
 		let requestOptions: RequestOptions
 
+		/// Whether the verification fails when the Pact Broker finds no pacts for the provider
+		let noPactsIsError: Bool?
+
+		/// Whether the verification output uses ANSI colours
+		let colouredOutput: Bool?
+
+		/// A file the verification results are written to as JSON
+		let jsonReportURL: URL?
+
 		// MARK: - Initialization
 
 		/// Defines the options to use when verifying a provider
@@ -137,6 +146,9 @@ public extension ProviderVerifier {
 		///   - filter: Only validates the interactions that match the filter
 		///   - stateChangeURL: URL to post state change requests to
 		///   - requestOptions: Options of the requests to the provider and the state change URL
+		///   - noPactsIsError: Whether the verification fails when the Pact Broker finds no pacts for the provider. It fails by default.
+		///   - colouredOutput: Whether the verification output uses ANSI colours. It uses them by default.
+		///   - jsonReportURL: A file the verification results are written to as JSON, with the result of every interaction
 		///
 		/// The verification logs are written to the sinks configured with `Logging.initialize(_:)` from PactSwiftMockServer.
 		///
@@ -145,7 +157,10 @@ public extension ProviderVerifier {
 			pactsSource: PactsSource,
 			filter: FilterPacts? = nil,
 			stateChangeURL: URL? = nil,
-			requestOptions: RequestOptions = RequestOptions()
+			requestOptions: RequestOptions = RequestOptions(),
+			noPactsIsError: Bool? = nil,
+			colouredOutput: Bool? = nil,
+			jsonReportURL: URL? = nil
 		) {
 			self.providerURL = provider.url
 			self.port = provider.port
@@ -154,6 +169,9 @@ public extension ProviderVerifier {
 			self.filterPacts = filter
 			self.stateChangeURL = stateChangeURL
 			self.requestOptions = requestOptions
+			self.noPactsIsError = noPactsIsError
+			self.colouredOutput = colouredOutput
+			self.jsonReportURL = jsonReportURL
 		}
 
 		@available(*, deprecated, message: "`logLevel` is ignored. Configure Pact logging with `Logging.initialize(_:)` from PactSwiftMockServer")
@@ -182,7 +200,10 @@ extension ProviderVerifier.Options {
 			customHeaders: requestOptions.customHeaders,
 			disableSSLVerification: requestOptions.disableSSLVerification,
 			requestTimeout: requestOptions.timeout,
-			followRedirects: requestOptions.followRedirects
+			followRedirects: requestOptions.followRedirects,
+			noPactsIsError: noPactsIsError,
+			colouredOutput: colouredOutput,
+			jsonReportURL: jsonReportURL
 		)
 
 		switch pactsSource {
@@ -206,8 +227,8 @@ extension ProviderVerifier.Options {
 		case .files(let files):
 			options.sources = files.map { .file($0) }
 
-		case .urls(let pactURLs):
-			options.sources = pactURLs.map { .url($0) }
+		case let .urls(pactURLs, authentication):
+			options.sources = pactURLs.map { .url($0, authentication: authentication?.verificationAuthentication) }
 		}
 
 		switch filterPacts {
@@ -237,12 +258,6 @@ extension ProviderVerifier.Options {
 private extension PactBroker {
 
 	var verificationSource: ProviderVerificationOptions.Broker {
-		let authentication: ProviderVerificationOptions.Authentication
-		switch self.authentication {
-		case .auth(let auth): authentication = .basic(username: auth.username, password: auth.password)
-		case .token(let auth): authentication = .token(auth.token)
-		}
-
 		let consumerVersionSelectors: [String] = consumerTags?.compactMap {
 			do {
 				return try $0.toJSONString()
@@ -254,7 +269,7 @@ private extension PactBroker {
 
 		return .init(
 			url: url,
-			authentication: authentication,
+			authentication: authentication.verificationAuthentication,
 			// WIP pacts are only verified with pending pacts enabled
 			enablePending: includePending == true || includeWIP != nil,
 			includeWIPPactsSince: includeWIP?.sinceDate.iso8601short,
@@ -262,6 +277,17 @@ private extension PactBroker {
 			providerBranch: providerBranch,
 			consumerVersionSelectors: consumerVersionSelectors
 		)
+	}
+
+}
+
+private extension PactBroker.Either where A == PactBroker.SimpleAuth, T == PactBroker.APIToken {
+
+	var verificationAuthentication: ProviderVerificationOptions.Authentication {
+		switch self {
+		case .auth(let auth): return .basic(username: auth.username, password: auth.password)
+		case .token(let auth): return .token(auth.token)
+		}
 	}
 
 }

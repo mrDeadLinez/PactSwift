@@ -61,6 +61,30 @@ final class ProviderVerifierOptionsTests: XCTestCase {
 		XCTAssertEqual(testSubject.verificationOptions.sources, [.url(URL(string: "http://some.url/file.json")!)])
 	}
 
+	func testWhenPactsSourceIsURLsWithAuthentication() {
+		let testSubject = ProviderVerifier.Options(
+			provider: ProviderVerifier.Provider(port: 8080),
+			pactsSource: .urls([URL(string: "http://some.url/file.json")!], authentication: .token(PactBroker.APIToken("test-token")))
+		)
+
+		XCTAssertEqual(testSubject.verificationOptions.sources, [.url(URL(string: "http://some.url/file.json")!, authentication: .token("test-token"))])
+	}
+
+	func testOutputOptions() {
+		let report = URL(fileURLWithPath: "/tmp/report.json")
+		let options = ProviderVerifier.Options(
+			provider: .init(port: 1234),
+			pactsSource: .directories(["/tmp/pacts"]),
+			noPactsIsError: false,
+			colouredOutput: false,
+			jsonReportURL: report
+		).verificationOptions
+
+		XCTAssertEqual(options.noPactsIsError, false)
+		XCTAssertEqual(options.colouredOutput, false)
+		XCTAssertEqual(options.jsonReportURL, report)
+	}
+
 	func testWithStateChangeURL() {
 		let testSubject = ProviderVerifier.Options(
 			provider: .init(port: 8080),
