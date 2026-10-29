@@ -36,4 +36,19 @@ class MatcherRegexTests: MatcherTestCase {
 		)
 	}
 
+	func testGeneratedRegex_SerializesToJSON() throws {
+		let json = try jsonString(for: .generatedRegex("[A-Z]{3}", example: "ABC"))
+
+		XCTAssertEqual(
+			json,
+			#"""
+			{
+			  "pact:generator:type" : "Regex",
+			  "pact:matcher:type" : "regex",
+			  "regex" : "[A-Z]{3}",
+			  "value" : "ABC"
+			}
+			"""#
+		)
+	}
 }

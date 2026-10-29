@@ -31,7 +31,7 @@ class MatcherRandomIntegerTests: MatcherTestCase {
 			  "max" : 30,
 			  "min" : 20,
 			  "pact:generator:type" : "RandomInt",
-			  "pact:matcher:type" : "type",
+			  "pact:matcher:type" : "integer",
 			  "value" : 23
 			}
 			"""#

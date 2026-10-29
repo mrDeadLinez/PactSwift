@@ -408,6 +408,19 @@ See [Wiki page about Example Generators][example-generators] for a list of examp
 
 Or peek into [/Sources/ExampleGenerators/][pact-swift-example-generators].
 
+Values can also be generated from a regular expression, or from the provider state params when the provider is verified:
+
+```swift
+.given(try Interaction.ProviderState(description: "A user exists", params: ["id": 7]))
+// ...
+try response.jsonBody(
+  .like([
+    "id": .fromProviderState("id", example: 1),
+    "code": .generatedRegex("^[A-Z]{3}$", example: "ABC")
+  ])
+)
+```
+
 ## Demo projects
 
 [![PactSwift - Consumer](https://github.com/surpher/pact-swift-examples/actions/workflows/test_projects.yml/badge.svg)](https://github.com/surpher/pact-swift-examples/actions/workflows/test_projects.yml)

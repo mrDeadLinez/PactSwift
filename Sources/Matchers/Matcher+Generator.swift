@@ -21,9 +21,25 @@ import Foundation
 
 public extension Matcher {
 
-	// Not sure how to implement these best.
-	// TODO: "Regex"
-	// TODO: "ProviderState"
+	/// Generate a string matching the `regex`. The value is also matched against the `regex`.
+	///
+	/// - Parameters:
+	///   - regex: The regular expression.
+	///   - example: An example value that matches the `regex`.
+	///
+	static func generatedRegex(_ regex: String, example: String) -> AnyMatcher {
+		GenericMatcher(type: "regex", value: example, generator: .regex, regex: regex).asAny()
+	}
+
+	/// Generate a value from the provider state params when the provider is verified. The consumer test uses the `example`.
+	///
+	/// - Parameters:
+	///   - expression: The expression that builds the value from the provider state params, eg: `"/users/${id}"` or `"id"`.
+	///   - example: An example value. Its type sets the type of the generated value.
+	///
+	static func fromProviderState<T: Encodable>(_ expression: String, example: T) -> AnyMatcher {
+		GenericMatcher(type: "type", value: example, generator: .providerState, expression: expression, dataType: dataType(of: example)).asAny()
+	}
 
 	/// Generate a MockServer URL.
 	///
@@ -46,7 +62,7 @@ public extension Matcher {
 	}
 
 	static func randomInteger<T: BinaryInteger & Encodable>(like value: T, range: ClosedRange<Int>? = nil) -> AnyMatcher {
-		GenericMatcher(type: "type", value: value, generator: .randomInt, min: range?.lowerBound, max: range?.upperBound).asAny()
+		GenericMatcher(type: "integer", value: value, generator: .randomInt, min: range?.lowerBound, max: range?.upperBound).asAny()
 	}
 
 	/// Generate a random `Int` within the specified `range`.
@@ -55,7 +71,7 @@ public extension Matcher {
 	///   - range: The range of values that the generated number should be within.
 	///
 	static func randomInteger(_ range: ClosedRange<Int>) -> AnyMatcher {
-		GenericMatcher(type: "type", value: range.randomElement(), generator: .randomInt, min: range.lowerBound, max: range.upperBound).asAny()
+		GenericMatcher(type: "integer", value: range.randomElement(), generator: .randomInt, min: range.lowerBound, max: range.upperBound).asAny()
 	}
 
 	static func randomDecimal<T: FloatingPoint & Encodable>(like value: T, digits: Int? = nil ) -> AnyMatcher {
@@ -151,5 +167,15 @@ public extension Matcher {
 
 	static func generatedTime(_ value: String, format: String, expression: String? = nil) -> AnyMatcher {
 		GenericMatcher(type: "type", value: value, generator: .time, format: format, expression: expression).asAny()
+	}
+}
+
+private func dataType(of value: Any) -> String {
+	switch value {
+	case is Bool: return "BOOLEAN"
+	case is any BinaryInteger: return "INTEGER"
+	case is any BinaryFloatingPoint, is Decimal: return "DECIMAL"
+	case is String: return "STRING"
+	default: return "RAW"
 	}
 }

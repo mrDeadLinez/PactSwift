@@ -18,34 +18,30 @@
 import XCTest
 
 @testable import PactSwift
-/*
-class FromProviderStateTests: XCTestCase {
 
-	func testMatcher_FromProviderState_InitsWithValue() throws {
-		let testStringResult = try XCTUnwrap((Matcher.FromProviderState(parameter: "testParameter", value: .string("some-string")).value as Any) as? String)
-		XCTAssertEqual(testStringResult, "some-string")
+class FromProviderStateTests: MatcherTestCase {
 
-		let testIntResult = try XCTUnwrap((Matcher.FromProviderState(parameter: "testParameter", value: .int(100)).value as Any) as? Int)
-		XCTAssertEqual(testIntResult, 100)
+	func testFromProviderState_SerializesToJSON() throws {
+		let json = try jsonString(for: .fromProviderState("/users/${id}", example: "/users/1"))
 
-		let testDecimalResult = try XCTUnwrap((Matcher.FromProviderState(parameter: "testParameter", value: .decimal(Decimal(123.45))).value as Any) as? Decimal)
-		XCTAssertEqual(testDecimalResult, Decimal(123.45))
-
-		let testBoolResult = try XCTUnwrap((Matcher.FromProviderState(parameter: "testParameter", value: .bool(true)).value as Any) as? Bool)
-		XCTAssertEqual(testBoolResult, true)
+		XCTAssertEqual(
+			json,
+			#"""
+			{
+			  "dataType" : "STRING",
+			  "expression" : "/users/${id}",
+			  "pact:generator:type" : "ProviderState",
+			  "pact:matcher:type" : "type",
+			  "value" : "/users/1"
+			}
+			"""#
+		)
 	}
 
-	func testMatcher_FromProviderState_InitsWithparameter() {
-		let testParameterResult = Matcher.FromProviderState(parameter: "testParameter", value: .int(100)).parameter
-		XCTAssertEqual(testParameterResult, "testParameter")
+	func testFromProviderState_SetsDataTypeFromExample() throws {
+		XCTAssertTrue(try jsonString(for: .fromProviderState("id", example: 1)).contains(#""dataType" : "INTEGER""#))
+		XCTAssertTrue(try jsonString(for: .fromProviderState("price", example: 1.5)).contains(#""dataType" : "DECIMAL""#))
+		XCTAssertTrue(try jsonString(for: .fromProviderState("active", example: true)).contains(#""dataType" : "BOOLEAN""#))
+		XCTAssertTrue(try jsonString(for: .fromProviderState("user", example: ["id": 1])).contains(#""dataType" : "RAW""#))
 	}
-
-	func testMatcher_FromProviderState_SetsRules() throws {
-		let sut = Matcher.FromProviderState(parameter: "test", value: .string("value"))
-		let result = try MatcherTestHelpers.encodeDecode(sut.rules)
-
-		XCTAssertEqual(result.first?.match, "type")
-	}
-
 }
-*/
